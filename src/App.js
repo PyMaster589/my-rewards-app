@@ -1,5 +1,30 @@
 import { useState } from "react";
 
+// Define the available rewards.
+// You can easily add, remove, or change rewards here.
+const rewards = [
+  {
+    name: "Free Coffee",
+    pointsNeeded: 500,
+    message: "Enjoy your free coffee!",
+  },
+  {
+    name: "Free Main Course (Please inform th cashier what you'd want.)",
+    pointsNeeded: 300,
+    message: "Enjoy your free pastry!",
+  },
+  {
+    name: "30% Off",
+    pointsNeeded: 1000,
+    message: "Your 20% discount has been applied!",
+  },
+  {
+    name: "Free Cookies",
+    pointsNeeded: 200,
+    message: "Enjoy your free cookies!",
+  },
+];
+
 const App = () => {
   // State for the card number input
   const [cardNumber, setCardNumber] = useState("");
@@ -7,8 +32,6 @@ const App = () => {
   const [pin, setPin] = useState("");
   // State for the points balance to be displayed
   const [balance, setBalance] = useState(null);
-  // State for the amount of points to redeem
-  const [pointsToRedeem, setPointsToRedeem] = useState("");
   // State for showing a loading message
   const [loading, setLoading] = useState(false);
   // State for showing a redemption loading message
@@ -62,14 +85,11 @@ const App = () => {
   };
 
   /**
-   * Handles the point redemption process (POST request).
+   * Handles the point redemption process (POST request) for a specific reward.
+   * @param {number} pointsToRedeem - The number of points to deduct.
+   * @param {string} redemptionMessage - A custom message to show upon success.
    */
-  const handleRedeemPoints = async () => {
-    // Basic validation to prevent redeeming zero or negative points
-    if (parseFloat(pointsToRedeem) <= 0 || !pointsToRedeem) {
-      setError("Please enter a valid amount to redeem.");
-      return;
-    }
+  const handleRedeemReward = async (pointsToRedeem, redemptionMessage) => {
     setRedeeming(true);
     setError("");
     setSuccessMessage("");
@@ -90,7 +110,7 @@ const App = () => {
       const data = await response.json();
 
       if (data.message.includes("successfully")) {
-        setSuccessMessage(data.message);
+        setSuccessMessage(redemptionMessage);
         // Refresh the balance after successful redemption
         handleCheckBalance();
       } else {
@@ -101,12 +121,11 @@ const App = () => {
       setError("An error occurred. Please try again later.");
     } finally {
       setRedeeming(false);
-      setPointsToRedeem(""); // Clear the input field
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4 font-sans">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4 font-sniglet">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
         <h1 className="text-3xl font-bold mb-4 text-gray-800">
           Rewards Balance Checker
@@ -166,28 +185,38 @@ const App = () => {
                 </p>
               </div>
 
-              {/* Redeem section */}
+              {/* Redeemable Rewards Section */}
               <div className="mt-8 space-y-4">
-                <p className="text-gray-600 font-medium">Redeem Points</p>
-                <input
-                  type="number"
-                  className="w-full px-4 py-2 text-lg text-gray-700 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300"
-                  placeholder="Points to Redeem"
-                  value={pointsToRedeem}
-                  onChange={(e) => setPointsToRedeem(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleRedeemPoints();
-                    }
-                  }}
-                />
-                <button
-                  className="w-full px-6 py-3 text-lg font-semibold text-white bg-red-600 rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition duration-300 transform hover:scale-105"
-                  onClick={handleRedeemPoints}
-                  disabled={redeeming}
-                >
-                  {redeeming ? "Redeeming..." : "Redeem Points"}
-                </button>
+                <p className="text-gray-600 font-medium text-center">
+                  Your Redeemable Rewards
+                </p>
+                {rewards.map(
+                  (reward, index) =>
+                    // Only display the reward if the customer can afford it
+                    balance >= reward.pointsNeeded && (
+                      <button
+                        key={index}
+                        className="w-full px-6 py-3 text-lg font-semibold text-white bg-red-600 rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition duration-300 transform hover:scale-105"
+                        onClick={() =>
+                          handleRedeemReward(
+                            reward.pointsNeeded,
+                            reward.message
+                          )
+                        }
+                        disabled={redeeming}
+                      >
+                        {redeeming
+                          ? "Redeeming..."
+                          : `${reward.name} (${reward.pointsNeeded} Points)`}
+                      </button>
+                    )
+                )}
+                {/* Display a message if no rewards can be redeemed */}
+                {rewards.every((reward) => balance < reward.pointsNeeded) && (
+                  <p className="text-gray-500 text-sm">
+                    Keep collecting points to unlock rewards!
+                  </p>
+                )}
               </div>
             </div>
           ) : error ? (
